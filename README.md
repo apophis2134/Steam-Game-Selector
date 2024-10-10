@@ -16,6 +16,8 @@ That's right, no more spending forever waiting for someone to make a decision, a
 *  **Run the script!**
 
 My future planning for this includes adding:
+* Package dependencies (gcc/wheel.c)
+* Wheel size adjustment based on window size
 * User-provided Steam usernames (via prompt/input of some sort) to eliminate need to plug in Steam IDs manually.
 * Make the wheel nicer looking.
 * Name abbreviation on the wheel
