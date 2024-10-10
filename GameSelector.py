@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 ffi = FFI()
 
-#C code to define function signatures
+# C code to define function signatures
 ffi.cdef("""
     double calculate_new_angle(double current_angle, double angle_step);
     void calculate_wedge_positions(double wheel_radius, double center_x, double center_y, double angle, double angle_step, double* positions);
@@ -31,7 +31,7 @@ steam_id_str = ast.literal_eval(os.environ.get("STEAM_IDS"))
 steam_ids = list(steam_id_str.values())[0:]
 
 # Error handling if values aren't set
-if (api_key or steam_ids) is None:
+if not api_key or not steam_ids:
     raise ValueError("Value not found, please set it in the .env file.")
 
 # Get games for single steam ID
@@ -155,19 +155,15 @@ def main():
     # Compile and load the shared library
     if platform.system() == 'Windows':
         dllPath = os.path.join(os.path.dirname(__file__), 'wheel.dll')
-        if os.path.exists(dllPath):
-            pass
-        else:
+        if not os.path.exists(dllPath):
             cPath = os.path.join(os.path.dirname(__file__), 'wheel.c')
             compile_command = f"gcc -shared -o {dllPath} -fPIC {cPath}"
             subprocess.run(compile_command, shell=True)
             time.sleep(4)
         C = ffi.dlopen(dllPath)
-    elif (platform.system() == 'Linux' or platform.system() == 'Darwin'):
+    else:
         soPath = os.path.join(os.path.dirname(__file__), 'wheel.so')
-        if os.path.exists(soPath):
-            pass
-        else:
+        if not os.path.exists(soPath):
             cPath = os.path.join(os.path.dirname(__file__), 'wheel.c')
             compile_command = f"gcc -shared -o {soPath} -fPIC {cPath} -lm"
             subprocess.run(compile_command, shell=True)
@@ -178,10 +174,7 @@ def main():
     shared_games = get_shared_games(api_key, steam_ids)
 
     # Filter and prepare game names
-    if shared_games:
-        game_names = [{'name': game['name']} for game in shared_games]
-    else:
-        game_names = [{'name': 'No owned games found.'}]
+    game_names = [{'name': game['name']} for game in shared_games] if shared_games else [{'name': 'No owned games found.'}]
 
     # Set up the GUI
     root = tk.Tk()
