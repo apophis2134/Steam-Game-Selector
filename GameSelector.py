@@ -1,12 +1,14 @@
 import os
 import ast
+import time
 import random
+import platform
 import requests
+import subprocess
 import tkinter as tk
 from cffi import FFI
 from math import pi, cos, sin
 from dotenv import load_dotenv
-from os.path import join,dirname
 
 ffi = FFI()
 
@@ -18,15 +20,8 @@ ffi.cdef("""
     int generate_random_color();
 """)
 
-# Compile and load the shared library (assuming the C code is in wheel.c)
-C = ffi.dlopen("./wheel.so")
-    # Command used to compile: gcc -shared -o wheel.so -fPIC wheel.c -lm
-
-# Alternatively, if you're using Windows, it will be a .dll file
-# C = ffi.dlopen("./wheel.dll")
-
 # Load API key
-dotenv_path = join(dirname(__file__), '.env')
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv()
 
 # Fetch SteamAPI, STEAM_IDS, and API URL from env
@@ -67,12 +62,10 @@ def get_shared_games(api_key, steam_ids):
     # Convert back to list of games with names
     shared_games = []
     for steam_id in steam_ids:
-        games = get_owned_games(api_key, steam_id)
         for game in games:
             if game['appid'] in shared_game_ids:
                 shared_games.append({'name': game['name'], 'appid': game['appid']})
         break   # Only need the names once since they're shared among all users
-
     return shared_games
 
 class GameWheelApp:
@@ -116,7 +109,6 @@ class GameWheelApp:
             wedge = self.canvas.create_polygon(
                 self.wheel_center[0], self.wheel_center[1], x1, y1, x2, y2,
                 fill=self.random_color(), outline="black")
-#            self.wedges.append(wedge)
 
             # Place the game name
             text_angle = angle + self.angle_step / 2
@@ -135,9 +127,9 @@ class GameWheelApp:
         self.is_spinning = True
 
         # Set random number of rotations and the final game it will land on
-        total_spins = random.randint(10,15)
+        total_spins = random.randint(8,10)
         slowing_factor = 1.05   # Will increase to slow down the wheel
-        speed = 0.1     # Initial speed of rotation
+        speed = 0.1             # Initial speed of rotation
         final_game_index = random.randint(0, len(self.games) - 1)
 
         # Animation loop
@@ -155,11 +147,33 @@ class GameWheelApp:
                 # Stop spinning and highlight the final game
                 self.is_spinning = False
                 print(f"Landed on: {self.games[final_game_index]['name']}")
-
         spin()
 
 # Main program
 def main():
+    global C
+    # Compile and load the shared library
+    if platform.system() == 'Windows':
+        dllPath = os.path.join(os.path.dirname(__file__), 'wheel.dll')
+        if os.path.exists(dllPath):
+            pass
+        else:
+            cPath = os.path.join(os.path.dirname(__file__), 'wheel.c')
+            compile_command = f"gcc -shared -o {dllPath} -fPIC {cPath}"
+            subprocess.run(compile_command, shell=True)
+            time.sleep(4)
+        C = ffi.dlopen(dllPath)
+    elif (platform.system() == 'Linux' or platform.system() == 'Darwin'):
+        soPath = os.path.join(os.path.dirname(__file__), 'wheel.so')
+        if os.path.exists(soPath):
+            pass
+        else:
+            cPath = os.path.join(os.path.dirname(__file__), 'wheel.c')
+            compile_command = f"gcc -shared -o {soPath} -fPIC {cPath} -lm"
+            subprocess.run(compile_command, shell=True)
+            time.sleep(4)
+        C = ffi.dlopen(soPath)
+
     # Fetch shared games among the Steam IDs
     shared_games = get_shared_games(api_key, steam_ids)
 
